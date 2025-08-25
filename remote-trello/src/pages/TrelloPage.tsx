@@ -1,4 +1,3 @@
-// src/pages/TrelloPage.tsx
 import React, { useEffect, useState } from "react";
 import { Layout as AntdLayout, Modal, Input, Button } from "antd";
 import Sidebar from "../components/Sidebar";
@@ -17,9 +16,9 @@ const TrelloPage: React.FC = () => {
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [boardName, setBoardName] = useState("");
+  const [boardColor, setBoardColor] = useState("#1890ff"); // 🎨 mặc định
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
 
-  // fetch boards khi mount
   useEffect(() => {
     dispatch(getBoards());
   }, [dispatch]);
@@ -28,9 +27,11 @@ const TrelloPage: React.FC = () => {
     if (board) {
       setEditingBoardId(board.id);
       setBoardName(board.name);
+      setBoardColor(board.color || "#1890ff");
     } else {
       setEditingBoardId(null);
       setBoardName("");
+      setBoardColor("#1890ff");
     }
     setIsModalOpen(true);
   };
@@ -39,21 +40,39 @@ const TrelloPage: React.FC = () => {
     if (!boardName.trim()) return;
 
     if (editingBoardId) {
-      dispatch(updateBoard({ id: editingBoardId, name: boardName, lists: [] }));
+      const currentBoard = boards.find((b) => b.id === editingBoardId);
+      if (currentBoard) {
+        dispatch(
+          updateBoard({
+            ...currentBoard,
+            name: boardName,
+            color: boardColor,
+          })
+        );
+      }
     } else {
-      dispatch(addBoard({ id: Date.now().toString(), name: boardName, lists: [] }));
+      dispatch(
+        addBoard({
+          id: Date.now().toString(),
+          name: boardName,
+          color: boardColor,
+          lists: [],
+        })
+      );
     }
 
     setIsModalOpen(false);
     setBoardName("");
+    setBoardColor("#1890ff");
     setEditingBoardId(null);
-    dispatch(getBoards()); // reload boards sau khi thay đổi
   };
 
   return (
     <AntdLayout style={{ height: "100vh" }}>
       <Header>
-        <p className="text-white font-bold">Trello Clone</p>
+        <a href="/" className="text-white font-bold">
+          Trello Clone
+        </a>
       </Header>
 
       <AntdLayout>
@@ -76,11 +95,20 @@ const TrelloPage: React.FC = () => {
         onOk={handleSaveBoard}
         onCancel={() => setIsModalOpen(false)}
       >
-        <Input
-          placeholder="Board name"
-          value={boardName}
-          onChange={(e) => setBoardName(e.target.value)}
-        />
+        <div className="mb-3">
+          <Input
+            placeholder="Board name"
+            value={boardName}
+            onChange={(e) => setBoardName(e.target.value)}
+            className="mb-3"
+          />
+          <input
+            type="color"
+            value={boardColor}
+            onChange={(e) => setBoardColor(e.target.value)}
+            style={{ width: "100%", height: "40px", border: "none", cursor: "pointer" }}
+          />
+        </div>
       </Modal>
     </AntdLayout>
   );

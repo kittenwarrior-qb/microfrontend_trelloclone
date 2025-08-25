@@ -2,6 +2,7 @@ module.exports = {
   name: "remoteComponents",
   filename: "remoteEntry.js",
   exposes: {
+    "./MyHeader": "./src/components/Header.tsx",
     "./Button": "./src/components/Button.tsx",
     "./Card": "./src/components/Card.tsx",
   },

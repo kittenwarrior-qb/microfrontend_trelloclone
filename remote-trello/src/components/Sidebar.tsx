@@ -1,4 +1,3 @@
-// src/components/Sidebar.tsx
 import React, { useState } from "react";
 import { Dropdown, Menu, Button } from "antd";
 import { MoreOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
