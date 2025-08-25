@@ -1,27 +1,30 @@
-import React from "react";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import Home from "./pages/Home";
-import About from "./pages/About";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
+import SingleLayout from "./layouts/SingleLayout";
+import HomePage from "./pages/Home";
+import AboutPage from "./pages/About";
+import TrelloPage from "TrelloPage/TrelloPage";
+import { Provider } from "react-redux";
+import { store } from "./store";
+import { BrowserRouter } from "react-router-dom";
 
 import "./style.css";
 
-const App: React.FC = () => {
+export default function App() {
   return (
-    <Router>
-      <div className="layout">
-        <Header />
-        <main style={{ padding: "20px" }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </Router>
-  );
-};
+    <Provider store={store}>
+      <BrowserRouter>
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+        </Route>
 
-export default App;
+        <Route element={<SingleLayout />}>
+          <Route path="/trello" element={<TrelloPage />} />
+        </Route>
+      </Routes>
+      </BrowserRouter>
+    </Provider>
+  );
+}

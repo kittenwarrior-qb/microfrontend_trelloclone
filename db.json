@@ -1,0 +1,46 @@
+{
+  "boards": [
+    {
+      "id": "b1",
+      "name": "dss",
+      "lists": []
+    },
+    {
+      "id": "b2",
+      "name": "Board 2",
+      "lists": [
+        {
+          "id": "l3",
+          "name": "Backlog",
+          "cards": [
+            {
+              "id": "c4",
+              "title": "Task 4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6c00",
+      "name": "haha",
+      "lists": [
+        {
+          "id": "1756095151218",
+          "name": "dsds",
+          "cards": []
+        }
+      ]
+    },
+    {
+      "id": "1756107582724",
+      "name": "123",
+      "lists": []
+    },
+    {
+      "id": "1756107587236",
+      "name": "dsadas",
+      "lists": []
+    }
+  ]
+}

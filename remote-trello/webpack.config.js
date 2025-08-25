@@ -1,11 +1,5 @@
-// HtmlWebpackPlugin: tự động inject script bundle vào index.html.
-// DefinePlugin: định nghĩa biến môi trường để sử dụng trong code.
-// ModuleFederationPlugin được import ở đây, nhưng config chi tiết sẽ tách riêng ở federation.config.js.
-
-
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const { DefinePlugin } = require("webpack");
 const { ModuleFederationPlugin } = require("webpack").container;
 const federationConfig = require("./federation.config");
 
@@ -15,16 +9,16 @@ module.exports = {
   output: {
     filename: "[name].js",
     path: path.resolve(__dirname, "dist"),
-    publicPath: "auto", // để module federation tự resolve URL bundle
-    clean: true, // xoá dist mỗi lần build
+    publicPath: "auto", 
+    clean: true, 
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
   },
   devServer: {
-    port: 3000,
+    port: 3004,
     open: true,
-    historyApiFallback: true, // hỗ trợ react-router SPA
+    historyApiFallback: true, 
     hot: true,
   },
   module: {
@@ -36,16 +30,13 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ["style-loader", "css-loader", "postcss-loader"],
+        use: ["style-loader", "css-loader"],
       },
     ],
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: "./src/index.html",
-    }),
-    new DefinePlugin({
-      "process.env.NODE_ENV": JSON.stringify("development"),
     }),
     new ModuleFederationPlugin(federationConfig), 
   ],
