@@ -1,0 +1,23 @@
+{
+  "name": "run",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"npm run start-container\" \"npm run start-remote-components\" \"npm run start-remote-trello\"",
+    "start-container": "cd ./mf-trello-clone && npm run start",
+    "start-remote-components": "cd ./remote-components && npm run start",
+    "start-remote-trello": "cd ./remote-trello && npm run start",
+
+    "build": "npm run build-container && npm run build-remote-components && npm run build-remote-trello",
+    "build-container": "cd ./mf-trello-clone && npm run build",
+    "build-remote-components": "cd ./remote-components && npm run build",
+    "build-remote-trello": "cd ./remote-trello && npm run build",
+
+    "serve": "concurrently \"npm run serve-container\" \"npm run serve-remote-components\" \"npm run serve-remote-trello\"",
+    "serve-container": "serve -s mf-trello-clone/dist -l 3000",
+    "serve-remote-components": "serve -s remote-components/dist -l 3003",
+    "serve-remote-trello": "serve -s remote-trello/dist -l 3004"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

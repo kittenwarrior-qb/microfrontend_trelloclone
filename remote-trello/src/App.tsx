@@ -1,7 +1,6 @@
 import React from "react";
 import TrelloPage from "./pages/TrelloPage";
 
-import "./style.css";
 
 const App: React.FC = () => {
   return (

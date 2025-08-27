@@ -1,27 +1,25 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const { DefinePlugin } = require("webpack");
 const { ModuleFederationPlugin } = require("webpack").container;
 const federationConfig = require("./federation.config");
 
 module.exports = {
   entry: "./src/index.tsx",
-  mode: "development",
+  mode: "production",
   output: {
     filename: "[name].js",
     path: path.resolve(__dirname, "dist"),
     publicPath: "auto",
-    clean: true,
+    clean: true, 
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
   },
   devServer: {
-    port: 3003,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-    },
+    port: 3000,
     open: true,
-    historyApiFallback: true,
+    historyApiFallback: true, 
     hot: true,
   },
   module: {
@@ -41,6 +39,9 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/index.html",
     }),
-    new ModuleFederationPlugin(federationConfig),
+    new DefinePlugin({
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    }),
+    new ModuleFederationPlugin(federationConfig), 
   ],
 };

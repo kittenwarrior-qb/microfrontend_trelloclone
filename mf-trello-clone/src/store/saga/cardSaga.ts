@@ -1,94 +1,84 @@
-import { call, put, takeLatest } from "redux-saga/effects";
+// saga/cardSaga.ts
+import { call, put, takeEvery } from "redux-saga/effects";
 import axios, { AxiosResponse } from "axios";
-import { getBoardsFailure, BoardType, CardType, ListType } from "../slice/boardSlice";
+import {
+  fetchCards,
+  fetchCardsSuccess,
+  fetchCardsFailure,
+  addCardSuccess,
+  updateCardSuccess,
+  deleteCardSuccess,
+  moveCard,
+  moveCardSuccess,
+  MoveCardPayload,
+  CardType,
+} from "../slice/cardSlice";
 
-const API_URL = "http://localhost:8000/boards";
+const API_URL = "http://localhost:3001/api"; 
 
-// === Add Card ===
+function* fetchCardsSaga(action: { type: string; payload: { listId: string } }) {
+  try {
+    const { listId } = action.payload;
+    const res: AxiosResponse<CardType[]> = yield call(() =>
+      axios.get(`${API_URL}/lists/${listId}/cards`)
+    );
+    yield put(fetchCardsSuccess({ listId, cards: res.data }));
+  } catch (err: any) {
+    yield put(fetchCardsFailure(err.message));
+  }
+}
+
 function* addCardSaga(action: {
   type: string;
-  payload: { boardId: string; listId: string; card: CardType };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+  payload: { listId: string; card: CardType };
+}) {
   try {
-    const { boardId, listId, card } = action.payload;
-
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
+    const { listId, card } = action.payload;
+    const res: AxiosResponse<CardType> = yield call(() =>
+      axios.post(`${API_URL}/lists/${listId}/cards`, card)
     );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: board.lists.map((l) =>
-        l.id === listId ? { ...l, cards: [...l.cards, card] } : l
-      ),
-    };
-
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    yield put(addCardSuccess(res.data));
+  } catch (err: any) {
+    yield put(fetchCardsFailure(err.message));
   }
 }
 
-// === Update Card ===
-function* updateCardSaga(action: {
-  type: string;
-  payload: { boardId: string; listId: string; card: CardType };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+function* updateCardSaga(action: { type: string; payload: CardType }) {
   try {
-    const { boardId, listId, card } = action.payload;
-
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
+    const card = action.payload;
+    const res: AxiosResponse<CardType> = yield call(() =>
+      axios.put(`${API_URL}/cards/${card.id}`, card)
     );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: board.lists.map((l) =>
-        l.id === listId
-          ? { ...l, cards: l.cards.map((c) => (c.id === card.id ? card : c)) }
-          : l
-      ),
-    };
-
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    yield put(updateCardSuccess(res.data));
+  } catch (err: any) {
+    yield put(fetchCardsFailure(err.message));
   }
 }
 
-// === Delete Card ===
-function* deleteCardSaga(action: {
-  type: string;
-  payload: { boardId: string; listId: string; cardId: string };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+function* deleteCardSaga(action: { type: string; payload: string }) {
   try {
-    const { boardId, listId, cardId } = action.payload;
-
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
-    );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: board.lists.map((l) =>
-        l.id === listId
-          ? { ...l, cards: l.cards.filter((c) => c.id !== cardId) }
-          : l
-      ),
-    };
-
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    const cardId = action.payload;
+    yield call(() => axios.delete(`${API_URL}/cards/${cardId}`));
+    yield put(deleteCardSuccess(cardId));
+  } catch (err: any) {
+    yield put(fetchCardsFailure(err.message));
   }
 }
-
-// === Root Saga for Cards ===
+function* moveCardSaga(action: { type: string; payload: MoveCardPayload }) {
+  try {
+    const { cardId, toListId } = action.payload;
+    const res: AxiosResponse<CardType> = yield call(() =>
+      axios.patch(`${API_URL}/cards/${cardId}`, { list_id: toListId })
+    );
+    yield put(moveCardSuccess(res.data));
+  } catch (err: any) {
+    yield put(fetchCardsFailure(err.message));
+  }
+}
 export default function* cardSaga() {
-  yield takeLatest("boards/addCard", addCardSaga);
-  yield takeLatest("boards/updateCard", updateCardSaga);
-  yield takeLatest("boards/deleteCard", deleteCardSaga);
+  yield takeEvery(fetchCards.type, fetchCardsSaga);
+  yield takeEvery(moveCard.type, moveCardSaga);
+  yield takeEvery("cards/addCard", addCardSaga);
+  yield takeEvery("cards/updateCard", updateCardSaga);
+  yield takeEvery("cards/deleteCard", deleteCardSaga);
 }

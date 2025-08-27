@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "federation.config.js",
   "scripts": {
-    "build": "webpack build --config webpack.config.js",
-    "start": "webpack serve --config webpack.config.js"
+    "build": "webpack --config webpack.prod.js",
+    "start": "webpack serve --config webpack.dev.js"
   },
   "author": "",
   "license": "ISC",

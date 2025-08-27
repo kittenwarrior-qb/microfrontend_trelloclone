@@ -1,38 +1,59 @@
-import React, { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { BoardType, ListType, CardType, RootState } from "../types/trello";
-import { addList, updateList, deleteList, addCard, updateCard, deleteCard } from "container/store";
-import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Menu, Input, Modal, Button } from "antd";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, ListType, CardType } from "../types/trello";
+import { actions } from "container/store";
+import {
+  MoreOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import { Dropdown, Menu, Input, Modal, Button, Spin } from "antd";
+import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
+import { Draggable } from "./Draggable";
+import { Droppable } from "./Droppable";
 
 interface ContentProps {
   selectedBoardId: string | null;
+  boardColor?: string;
 }
 
-const TrelloContent: React.FC<ContentProps> = ({ selectedBoardId }) => {
+const TrelloContent: React.FC<ContentProps> = ({
+  selectedBoardId,
+  boardColor,
+}) => {
   const dispatch = useDispatch();
-  const boards = useSelector((state: RootState) => state.boards.boards);
-  const [boardState, setBoardState] = useState<BoardType | null>(null);
+  const listsState = useSelector((state: RootState) => state.lists);
+  const cardsState = useSelector((state: RootState) => state.cards);
 
-  const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
   const [listName, setListName] = useState("");
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
 
-  const [editingCardListId, setEditingCardListId] = useState<string | null>(null);
-  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
+  const [editingCardListId, setEditingCardListId] = useState<string | null>(
+    null
+  );
   const [cardName, setCardName] = useState("");
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
   useEffect(() => {
-    if (boards.length > 0) {
-      const board = boards.find((b) => b.id === selectedBoardId) || boards[0];
-      setBoardState(board || null);
+    if (selectedBoardId) {
+      dispatch(actions.fetchLists(selectedBoardId));
     }
-  }, [boards, selectedBoardId]);
+  }, [selectedBoardId, dispatch]);
 
-  if (!boardState) return <p>No board selected</p>;
+  useEffect(() => {
+    if (listsState.items.length && selectedBoardId) {
+      listsState.items
+        .filter((list) => list.board_id === selectedBoardId)
+        .forEach((list) => dispatch(actions.fetchCards({ listId: list.id })));
+    }
+  }, [listsState.items, selectedBoardId, dispatch]);
 
-  // --- List handlers ---
+  if (!selectedBoardId) return <p className="p-4">No board selected</p>;
+  // if (listsState.loading || cardsState.loading) return <Spin className="p-4" />;
+
   const handleOpenListModal = (list?: ListType) => {
     if (list) {
       setEditingList(list);
@@ -45,23 +66,31 @@ const TrelloContent: React.FC<ContentProps> = ({ selectedBoardId }) => {
   };
 
   const handleSaveList = () => {
-    if (!listName.trim() || !boardState) return;
+    if (!listName.trim() || !selectedBoardId) return;
+
     if (editingList) {
-      dispatch(updateList({ boardId: boardState.id, list: { ...editingList, name: listName } }));
+      dispatch(actions.updateList({ ...editingList, name: listName }));
     } else {
-      dispatch(addList({ boardId: boardState.id, list: { id: Date.now().toString(), name: listName, cards: [] } }));
+      dispatch(
+        actions.addList({
+          boardId: selectedBoardId,
+          list: { name: listName, board_id: selectedBoardId },
+        })
+      );
     }
+
+    dispatch(actions.fetchLists(selectedBoardId));
+
     setIsListModalOpen(false);
     setListName("");
     setEditingList(null);
   };
 
   const handleDeleteList = (listId: string) => {
-    if (!boardState) return;
-    dispatch(deleteList({ boardId: boardState.id, listId }));
+    dispatch(actions.deleteList(listId));
   };
 
-  // --- Card handlers ---
+  // ================== CARD ==================
   const handleOpenCardModal = (listId: string, card?: CardType) => {
     setEditingCardListId(listId);
     if (card) {
@@ -75,113 +104,166 @@ const TrelloContent: React.FC<ContentProps> = ({ selectedBoardId }) => {
   };
 
   const handleSaveCard = () => {
-    if (!cardName.trim() || !boardState || !editingCardListId) return;
+    if (!cardName.trim() || !editingCardListId) return;
 
     if (editingCard) {
-      // === Update card ===
-      dispatch(updateCard({ boardId: boardState.id, listId: editingCardListId, card: { ...editingCard, title: cardName } }));
+      dispatch(actions.updateCard({ ...editingCard, title: cardName }));
     } else {
-      // === Add new card ===
-      dispatch(addCard({ boardId: boardState.id, listId: editingCardListId, card: { id: Date.now().toString(), title: cardName } }));
+      dispatch(
+        actions.addCard({
+          listId: editingCardListId,
+          card: { title: cardName, list_id: editingCardListId },
+        })
+      );
     }
+    dispatch(actions.fetchLists(selectedBoardId));
 
-    // Reset modal state
     setIsCardModalOpen(false);
     setCardName("");
     setEditingCard(null);
     setEditingCardListId(null);
   };
 
-  const handleDeleteCard = (listId: string, cardId: string) => {
-    if (!boardState) return;
-    dispatch(deleteCard({ boardId: boardState.id, listId, cardId }));
+  const handleDeleteCard = (cardId: string) => {
+    dispatch(actions.deleteCard(cardId));
+  };
+
+  // ================== DND ==================
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    console.log("Payload sent:", { cardId: active.id, toListId: over.id });
+    dispatch(actions.moveCard({ cardId: active.id.toString(), toListId: over.id.toString() }));
   };
 
   return (
-    <div className="p-4 overflow-x-auto h-[calc(100vh-64px)]" style={{ backgroundColor: boardState.color || "#f0f0f0" }}>
-      <div className="flex gap-4 items-start">
-        {boardState.lists.map((list) => {
-          const listMenu = (
-            <Menu
-              items={[
-                { key: "edit", icon: <EditOutlined />, label: "Edit", onClick: () => handleOpenListModal(list) },
-                { key: "delete", icon: <DeleteOutlined />, label: "Delete", onClick: () => handleDeleteList(list.id) },
-              ]}
-            />
-          );
+    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <div
+        className="p-4 overflow-x-auto h-[calc(100vh-64px)]"
+        style={{ backgroundColor: boardColor || "#f3f4f6" }}
+      >
+        <div className="flex gap-4 items-start">
+          {listsState.items
+            .filter((list) => String(list.board_id) === String(selectedBoardId))
+            .map((list) => {
+              const cards = cardsState.items.filter((c) => c.list_id === list.id);
 
-          return (
-            <div key={list.id} className="min-w-[250px] bg-gray-200 rounded p-2 flex flex-col">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-gray-800">{list.name}</h4>
-                <Dropdown overlay={listMenu} trigger={["click"]}>
-                  <Button type="text" icon={<MoreOutlined />} size="small" />
-                </Dropdown>
-              </div>
+              const listMenu = (
+                <Menu
+                  items={[
+                    {
+                      key: "edit",
+                      icon: <EditOutlined />,
+                      label: "Edit",
+                      onClick: () => handleOpenListModal(list),
+                    },
+                    {
+                      key: "delete",
+                      icon: <DeleteOutlined />,
+                      label: "Delete",
+                      onClick: () => handleDeleteList(list.id),
+                    },
+                  ]}
+                />
+              );
 
-              <div className="flex flex-col gap-2">
-                {list.cards.map((card) => {
-                  const cardMenu = (
-                    <Menu
-                      items={[
-                        { key: "edit", icon: <EditOutlined />, label: "Edit", onClick: () => handleOpenCardModal(list.id, card) },
-                        { key: "delete", icon: <DeleteOutlined />, label: "Delete", onClick: () => handleDeleteCard(list.id, card.id) },
-                      ]}
-                    />
-                  );
-
-                  return (
-                    <div key={card.id} className="relative group">
-                      <div className="bg-white p-2 rounded shadow flex justify-between items-center">
-                        <span>{card.title}</span>
-                        <div className="invisible group-hover:visible">
-                          <Dropdown overlay={cardMenu} trigger={["click"]}>
-                            <Button type="text" icon={<MoreOutlined />} size="small" />
-                          </Dropdown>
-                        </div>
-                      </div>
+              return (
+                <Droppable key={list.id} id={list.id.toString()}>
+                  <div className="min-w-[250px] bg-gray-200 rounded p-2 flex flex-col">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold text-gray-800">{list.name}</h4>
+                      <Dropdown overlay={listMenu} trigger={["click"]}>
+                        <Button type="text" icon={<MoreOutlined />} size="small" />
+                      </Dropdown>
                     </div>
-                  );
-                })}
 
-                <button
-                  className="mt-1 p-2 rounded flex gap-1 hover:bg-gray-300 transition"
-                  onClick={() => handleOpenCardModal(list.id)}
-                >
-                  <PlusOutlined /> Thêm thẻ
-                </button>
-              </div>
-            </div>
-          );
-        })}
+                    <div className="flex flex-col gap-2">
+                      {cards.map((card) => {
+                        const cardMenu = (
+                          <Menu
+                            items={[
+                              {
+                                key: "edit",
+                                icon: <EditOutlined />,
+                                label: "Edit",
+                                onClick: () => handleOpenCardModal(list.id, card),
+                              },
+                              {
+                                key: "delete",
+                                icon: <DeleteOutlined />,
+                                label: "Delete",
+                                onClick: () => handleDeleteCard(card.id),
+                              },
+                            ]}
+                          />
+                        );
 
-        <div
-          className="min-w-[250px] bg-gray-300 rounded p-2 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition"
-          onClick={() => handleOpenListModal()}
-        >
-          <span>+ Thêm danh sách</span>
+                        return (
+                          <Draggable key={card.id} id={card.id}>
+                            <div className="bg-white p-2 rounded shadow flex justify-between items-center">
+                              <span>{card.title}</span>
+                              <div className="invisible group-hover:visible">
+                                <Dropdown overlay={cardMenu} trigger={["click"]}>
+                                  <Button
+                                    type="text"
+                                    icon={<MoreOutlined />}
+                                    size="small"
+                                  />
+                                </Dropdown>
+                              </div>
+                            </div>
+                          </Draggable>
+                        );
+                      })}
+
+                      <button
+                        className="mt-1 p-2 rounded flex gap-1 hover:bg-gray-300 transition"
+                        onClick={() => handleOpenCardModal(list.id)}
+                      >
+                        <PlusOutlined /> Thêm thẻ
+                      </button>
+                    </div>
+                  </div>
+                </Droppable>
+              );
+            })}
+
+          <div
+            className="min-w-[250px] bg-gray-300 rounded p-2 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition"
+            onClick={() => handleOpenListModal()}
+          >
+            <span>+ Thêm danh sách</span>
+          </div>
         </div>
+
+        <Modal
+          title={editingList ? "Sửa danh sách" : "Thêm danh sách"}
+          open={isListModalOpen}
+          onOk={handleSaveList}
+          onCancel={() => setIsListModalOpen(false)}
+        >
+          <Input
+            placeholder="List name"
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+          />
+        </Modal>
+
+        <Modal
+          title={editingCard ? "Sửa thẻ" : "Thêm thẻ"}
+          open={isCardModalOpen}
+          onOk={handleSaveCard}
+          onCancel={() => setIsCardModalOpen(false)}
+        >
+          <Input
+            placeholder="Card title"
+            value={cardName}
+            onChange={(e) => setCardName(e.target.value)}
+          />
+        </Modal>
       </div>
-
-      {/* List modal */}
-      <Modal
-        title={editingList ? "Sửa danh sách" : "Thêm danh sách"}
-        open={isListModalOpen}
-        onOk={handleSaveList}
-        onCancel={() => setIsListModalOpen(false)}
-      >
-        <Input placeholder="List name" value={listName} onChange={(e) => setListName(e.target.value)} />
-      </Modal>
-
-      <Modal
-        title={editingCard ? "Sửa thẻ" : "Thêm thẻ"}
-        open={isCardModalOpen}
-        onOk={handleSaveCard}
-        onCancel={() => setIsCardModalOpen(false)}
-      >
-        <Input placeholder="Card title" value={cardName} onChange={(e) => setCardName(e.target.value)} />
-      </Modal>
-    </div>
+    </DndContext>
   );
 };
 

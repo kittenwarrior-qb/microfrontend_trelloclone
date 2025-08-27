@@ -1,139 +1,93 @@
+// store/boardSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export interface CardType {
-  id: string;
-  title: string;
-}
-export interface ListType {
-  id: string;
-  name: string;
-  cards: CardType[];
-}
 export interface BoardType {
   id: string;
   name: string;
   color?: string;
-  lists: ListType[];
 }
 
-interface BoardsState {
-  boards: BoardType[];
+export interface ListType {
+  id: string;
+  name: string;
+  board_id: string;
+}
+
+export interface CardType {
+  id: string;
+  title: string;
+  list_id: string;
+}
+
+export interface BoardState {
+  items: BoardType[];
   loading: boolean;
   error: string | null;
 }
 
-const initialState: BoardsState = {
-  boards: [],
+const initialState: BoardState = {
+  items: [],
   loading: false,
   error: null,
 };
 
-const boardsSlice = createSlice({
+const boardSlice = createSlice({
   name: "boards",
   initialState,
   reducers: {
-    getBoards(state) {
+    fetchBoards(state) {
       state.loading = true;
       state.error = null;
     },
-    getBoardsSuccess(state, action: PayloadAction<BoardType[]>) {
-      state.boards = action.payload;
+    fetchBoardsSuccess(state, action: PayloadAction<BoardType[]>) {
+      state.items = action.payload;
       state.loading = false;
     },
-    getBoardsFailure(state, action: PayloadAction<string>) {
+    fetchBoardsFailure(state, action: PayloadAction<string>) {
       state.loading = false;
       state.error = action.payload;
     },
+
     addBoard(state, action: PayloadAction<BoardType>) {
-      state.boards.push(action.payload);
+      state.items.push({
+        ...action.payload,
+      });
+      state.loading = true;
     },
+    addBoardSuccess(state, action: PayloadAction<BoardType>) {
+      state.items.push(action.payload);
+      state.loading = false;
+    },
+
     updateBoard(state, action: PayloadAction<BoardType>) {
-      const idx = state.boards.findIndex((b) => b.id === action.payload.id);
-      if (idx !== -1) state.boards[idx] = action.payload;
+      state.loading = true;
     },
+    updateBoardSuccess(state, action: PayloadAction<BoardType>) {
+      const idx = state.items.findIndex((b) => b.id === action.payload.id);
+      if (idx !== -1) state.items[idx] = action.payload;
+      state.loading = false;
+    },
+
     deleteBoard(state, action: PayloadAction<string>) {
-      state.boards = state.boards.filter((b) => b.id !== action.payload);
+      state.loading = true;
     },
-
-    // Lists
-    addList(state, action: PayloadAction<{ boardId: string; list: ListType }>) {
-      const { boardId, list } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) board.lists.push(list);
-    },
-    updateList(
-      state,
-      action: PayloadAction<{ boardId: string; list: ListType }>
-    ) {
-      const { boardId, list } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) {
-        const idx = board.lists.findIndex((l) => l.id === list.id);
-        if (idx !== -1) board.lists[idx] = list;
-      }
-    },
-    deleteList(
-      state,
-      action: PayloadAction<{ boardId: string; listId: string }>
-    ) {
-      const { boardId, listId } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) board.lists = board.lists.filter((l) => l.id !== listId);
-    },
-
-    // Cards
-    addCard(
-      state,
-      action: PayloadAction<{ boardId: string; listId: string; card: CardType }>
-    ) {
-      const { boardId, listId, card } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) {
-        const list = board.lists.find((l) => l.id === listId);
-        if (list) list.cards.push(card);
-      }
-    },
-    updateCard(
-      state,
-      action: PayloadAction<{ boardId: string; listId: string; card: CardType }>
-    ) {
-      const { boardId, listId, card } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) {
-        const list = board.lists.find((l) => l.id === listId);
-        if (list) {
-          const idx = list.cards.findIndex((c) => c.id === card.id);
-          if (idx !== -1) list.cards[idx] = card;
-        }
-      }
-    },
-    deleteCard(
-      state,
-      action: PayloadAction<{ boardId: string; listId: string; cardId: string }>
-    ) {
-      const { boardId, listId, cardId } = action.payload;
-      const board = state.boards.find((b) => b.id === boardId);
-      if (board) {
-        const list = board.lists.find((l) => l.id === listId);
-        if (list) list.cards = list.cards.filter((c) => c.id !== cardId);
-      }
+    deleteBoardSuccess(state, action: PayloadAction<string>) {
+      state.items = state.items.filter((b) => b.id !== action.payload);
+      state.loading = false;
     },
   },
 });
 
 export const {
-  getBoards,
-  getBoardsSuccess,
-  getBoardsFailure,
+  fetchBoards,
+  fetchBoardsSuccess,
+  fetchBoardsFailure,
   addBoard,
+  addBoardSuccess,
   updateBoard,
+  updateBoardSuccess,
   deleteBoard,
-  addList,
-  updateList,
-  deleteList,
-  addCard,
-  updateCard,
-  deleteCard,
-} = boardsSlice.actions;
+  deleteBoardSuccess,
+} = boardSlice.actions;
 
-export default boardsSlice.reducer;
+export default boardSlice.reducer;

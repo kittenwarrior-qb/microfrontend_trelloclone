@@ -3,7 +3,7 @@ import { Dropdown, Menu, Button } from "antd";
 import { MoreOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BoardType } from "../types/trello";
 import { useDispatch } from "react-redux";
-import { deleteBoard, getBoards } from "container/store";
+import { actions } from "container/store";
 
 interface SidebarProps {
   boards: BoardType[];
@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-  boards,
+  boards = [],
   selectedBoardId,
   setSelectedBoardId,
   openModal,
@@ -22,8 +22,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [hoveredBoardId, setHoveredBoardId] = useState<string | null>(null);
 
   const handleDeleteBoard = (boardId: string) => {
-    dispatch(deleteBoard(boardId));
-    dispatch(getBoards());
+    if (!boardId) return;
+    if (actions.deleteBoard) {
+      dispatch(actions.deleteBoard(boardId));
+    }
     if (selectedBoardId === boardId) setSelectedBoardId(null);
   };
 
@@ -37,28 +39,48 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <ul>
-        {boards.map((board) => {
+        {(boards || []).map((board) => {
+          const boardId = board?.id ?? "";
+          const boardName = board?.name ?? "Untitled";
+
           const menu = (
             <Menu
               items={[
-                { key: "edit", icon: <EditOutlined />, label: "Edit", onClick: () => openModal(board) },
-                { key: "delete", icon: <DeleteOutlined />, label: "Delete", onClick: () => handleDeleteBoard(board.id) },
+                {
+                  key: "edit",
+                  icon: <EditOutlined />,
+                  label: "Edit",
+                  onClick: () => openModal(board),
+                },
+                {
+                  key: "delete",
+                  icon: <DeleteOutlined />,
+                  label: "Delete",
+                  onClick: () => handleDeleteBoard(boardId),
+                },
               ]}
             />
           );
 
           return (
             <li
-              key={board.id}
-              className={`flex justify-between items-center h-[50px] rounded ${selectedBoardId === board.id ? "bg-blue-200" : "hover:bg-gray-200"}`}
-              onMouseEnter={() => setHoveredBoardId(board.id)}
+              key={boardId}
+              className={`flex justify-between items-center h-[50px] rounded px-2 ${
+                selectedBoardId === boardId
+                  ? "bg-blue-200"
+                  : "hover:bg-gray-200"
+              }`}
+              onMouseEnter={() => setHoveredBoardId(boardId)}
               onMouseLeave={() => setHoveredBoardId(null)}
             >
-              <button onClick={() => setSelectedBoardId(board.id)} className="text-left w-full px-2 py-1">
-                {board.name}
+              <button
+                onClick={() => setSelectedBoardId(boardId)}
+                className="text-left w-full py-1"
+              >
+                {boardName}
               </button>
 
-              {hoveredBoardId === board.id && (
+              {hoveredBoardId === boardId && (
                 <Dropdown overlay={menu} trigger={["click"]}>
                   <Button type="text" icon={<MoreOutlined />} size="large" />
                 </Dropdown>

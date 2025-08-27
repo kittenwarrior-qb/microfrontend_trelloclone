@@ -1,86 +1,58 @@
+// saga/listSaga.ts
 import { call, put, takeLatest } from "redux-saga/effects";
-import axios, { AxiosResponse } from "axios";
-import { getBoardsFailure, BoardType, ListType } from "../slice/boardSlice";
+import axios from "axios";
+import { fetchBoardsFailure } from "../slice/boardSlice";
+import {
+  addListSuccess,
+  updateListSuccess,
+  deleteListSuccess,
+  fetchListsSuccess,
+  ListType,
+} from "../slice/listSlice";
 
-const API_URL = "http://localhost:8000/boards";
+const API_URL = "http://localhost:3001/api";
 
-// === Add List ===
-function* addListSaga(action: {
-  type: string;
-  payload: { boardId: string; list: ListType };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+function* fetchListsSaga(action: { type: string; payload: string }): Generator<any, void, any> {
+  try {
+    const boardId = action.payload;
+    const res = yield call(() => axios.get(`${API_URL}/boards/${boardId}/lists`));
+    yield put(fetchListsSuccess(res.data)); 
+  } catch (err: any) {
+    yield put(fetchBoardsFailure(err.message));
+  }
+}
+
+function* addListSaga(action: { type: string; payload: { boardId: string; list: ListType } }): Generator<any, void, any> {
   try {
     const { boardId, list } = action.payload;
-
-    // Lấy board hiện tại
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
-    );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: [...board.lists, list],
-    };
-
-    // Cập nhật board với list mới
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    const res = yield call(() => axios.post(`${API_URL}/boards/${boardId}/lists`, list));
+    yield put(addListSuccess(res.data));
+  } catch (err: any) {
+    yield put(fetchBoardsFailure(err.message));
   }
 }
 
-// === Update List ===
-function* updateListSaga(action: {
-  type: string;
-  payload: { boardId: string; list: ListType };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+function* updateListSaga(action: { type: string; payload: ListType }): Generator<any, void, any> {
   try {
-    const { boardId, list } = action.payload;
-
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
-    );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: board.lists.map((l) => (l.id === list.id ? list : l)),
-    };
-
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    const res = yield call(() => axios.put(`${API_URL}/lists/${action.payload.id}`, action.payload));
+    yield put(updateListSuccess(res.data));
+  } catch (err: any) {
+    yield put(fetchBoardsFailure(err.message));
   }
 }
 
-// === Delete List ===
-function* deleteListSaga(action: {
-  type: string;
-  payload: { boardId: string; listId: string };
-}): Generator<any, void, AxiosResponse<BoardType>> {
+function* deleteListSaga(action: { type: string; payload: string }) {
   try {
-    const { boardId, listId } = action.payload;
-
-    const boardRes: AxiosResponse<BoardType> = yield call(() =>
-      axios.get<BoardType>(`${API_URL}/${boardId}`)
-    );
-    const board: BoardType = boardRes.data;
-
-    const updatedBoard: BoardType = {
-      ...board,
-      lists: board.lists.filter((l) => l.id !== listId),
-    };
-
-    yield call(() => axios.put(`${API_URL}/${boardId}`, updatedBoard));
-  } catch (error: any) {
-    yield put(getBoardsFailure(error.message));
+    yield call(() => axios.delete(`${API_URL}/lists/${action.payload}`));
+    yield put(deleteListSuccess(action.payload));
+  } catch (err: any) {
+    yield put(fetchBoardsFailure(err.message));
   }
 }
 
-// === Root Saga for Lists ===
 export default function* listSaga() {
-  yield takeLatest("boards/addList", addListSaga);
-  yield takeLatest("boards/updateList", updateListSaga);
-  yield takeLatest("boards/deleteList", deleteListSaga);
+  yield takeLatest("lists/fetchLists", fetchListsSaga);
+  yield takeLatest("lists/addList", addListSaga);
+  yield takeLatest("lists/updateList", updateListSaga);
+  yield takeLatest("lists/deleteList", deleteListSaga);
 }

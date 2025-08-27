@@ -16,7 +16,7 @@ export default function App() {
       <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<TrelloPage />} />
           <Route path="/about" element={<AboutPage />} />
         </Route>
 
